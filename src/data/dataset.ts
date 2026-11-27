@@ -1,7 +1,7 @@
 // Everything read from one or more activity folders, put together.
 
 import {
-  readClock, readConsole, readIconCache, readPlayHistory, readPld, readSteps,
+  readClock, readConsole, readIconCache, readSmdh, readPlayHistory, readPld, readSteps,
 } from "./formats.ts";
 import type { ConsoleInfo, LibraryEntry, StepDay, Tid, TitleInfo } from "./formats.ts";
 import { correctTimes, sessionsFromHours, sessionsFromLog } from "./timeline.ts";
@@ -65,6 +65,13 @@ export function readFolder(files: FolderFiles, lang: number, now = nowMinutes())
   let titles = new Map<Tid, TitleInfo>();
   const idbt = files.get("idbt.dat"), idb = files.get("idb.dat");
   if (idbt && idb) titles = readIconCache(idbt, idb, lang);
+  // icons/<title id>.smdh: titles the icon cache does not have (homebrew and the like)
+  for (const [file, buf] of files) {
+    const m = /^([0-9a-f]{16})\.smdh$/i.exec(file);
+    if (!m || titles.has(m[1].toUpperCase())) continue;
+    const info = readSmdh(m[1].toUpperCase(), buf, lang);
+    if (info) titles.set(info.tid, info);
+  }
   return { source: { console: consoleInfo, logFrom, pldEnd, library, steps }, sessions, titles, notes };
 }
 

@@ -158,6 +158,14 @@ export function readIconCache(idbt: ArrayBuffer, idb: ArrayBuffer, lang: number)
   return out;
 }
 
+/** a title's own icon file (SMDH, 0x36C0 bytes): names from 0x08, the 48x48 icon at 0x24C0 */
+export function readSmdh(tid: Tid, buf: ArrayBuffer, lang: number): TitleInfo | null {
+  if (buf.byteLength < 0x36c0 || text(buf, 0, 4) !== "SMDH") return null;
+  const b = new Uint8Array(buf);
+  const { name, publisher } = titleNames(b, lang, 0x08);
+  return { tid, name, publisher, icon: decodeIcon(b.subarray(0x24c0, 0x24c0 + 0x1200)), iconSize: 48, seen: 0 };
+}
+
 function utf16(b: Uint8Array, start: number, bytes: number): string {
   let s = "";
   for (let i = start; i < start + bytes; i += 2) {
@@ -168,9 +176,9 @@ function utf16(b: Uint8Array, start: number, bytes: number): string {
   return s.trim();
 }
 
-function titleNames(rec: Uint8Array, lang: number) {
+function titleNames(rec: Uint8Array, lang: number, first = 0x20) {
   for (const l of [lang, 1, ...Array.from({ length: 16 }, (_, k) => k)]) {
-    const base = 0x20 + l * 0x200;
+    const base = first + l * 0x200;
     const name = utf16(rec, base, 0x80);
     if (name) return { name, publisher: utf16(rec, base + 0x180, 0x80) };
   }

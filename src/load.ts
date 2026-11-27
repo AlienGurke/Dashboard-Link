@@ -4,7 +4,7 @@
 import { unzipSync } from "fflate";
 import type { FolderFiles } from "./data/dataset.ts";
 
-const WANTED = /^(playhistory\.bin|pld\.dat|steps\.bin|idb\.dat|idbt\.dat|clock\.txt|console\.txt)$/i;
+const WANTED = /^(playhistory\.bin|pld\.dat|steps\.bin|idb\.dat|idbt\.dat|clock\.txt|console\.txt|[0-9a-f]{16}\.smdh)$/i;
 
 /** path -> data, for the files we read; grouped by the folder they are in */
 function group(files: { path: string; data: ArrayBuffer }[]): FolderFiles[] {
@@ -13,6 +13,8 @@ function group(files: { path: string; data: ArrayBuffer }[]): FolderFiles[] {
     const parts = f.path.replace(/\\/g, "/").split("/");
     const name = parts.pop()!.toLowerCase();
     if (!WANTED.test(name)) continue;
+    // icons/<title id>.smdh belong to the activity folder above them
+    if (name.endsWith(".smdh") && parts[parts.length - 1]?.toLowerCase() === "icons") parts.pop();
     const dir = parts.join("/");
     if (!dirs.has(dir)) dirs.set(dir, new Map());
     dirs.get(dir)!.set(name, f.data);
