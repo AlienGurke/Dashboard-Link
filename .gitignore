@@ -1,0 +1,7 @@
+node_modules
+dist
+*.local
+# real data never goes into the repo
+realdata/
+*.bin
+*.dat

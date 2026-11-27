@@ -1,0 +1,31 @@
+{
+  "name": "dashboard-link",
+  "version": "0.1.0",
+  "description": "Spielzeit-Dashboard für 3DS Link, Azahar-Link und melonDS-Link – läuft im Browser, deine Daten bleiben bei dir.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "node scripts/check-real.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlienGurke/dashboard-link.git"
+  },
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/AlienGurke/dashboard-link/issues"
+  },
+  "homepage": "https://github.com/AlienGurke/dashboard-link#readme",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "preact": "^11.2.0",
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "typescript": "^7.0.2",
+    "vite": "^6.4.6",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}
