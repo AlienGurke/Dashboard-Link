@@ -66,3 +66,6 @@ table.games td { padding: 5px 8px; border-top: 1px solid var(--line); }
 table.games td:first-child { width: 48px; }
 table.games.compact { margin-top: 12px; }
 table.games .num { text-align: right; white-space: nowrap; }
+
+.name { cursor: pointer; }
+.name:hover { text-decoration: underline dotted; }

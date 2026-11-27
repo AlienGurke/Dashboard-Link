@@ -1,4 +1,6 @@
 import type { TitleInfo } from "../data/formats.ts";
+import { ownName, setOwnName } from "../names.ts";
+import { T } from "../i18n.ts";
 
 const cache = new Map<string, string>();
 
@@ -23,4 +25,16 @@ export function Icon({ title, size = 48 }: { title?: TitleInfo; size?: number })
     : <div class="icon icon-empty" style={{ width: size, height: size }} />;
 }
 
-export const titleName = (t: TitleInfo | undefined, tid: string) => t?.name || tid;
+export const titleName = (t: TitleInfo | undefined, tid: string) => ownName(tid) || t?.name || tid;
+
+/** a title's name; a click lets you give it your own (kept in this browser) */
+export function Name({ title, tid, onChange }: { title?: TitleInfo; tid: string; onChange: () => void }) {
+  const shown = titleName(title, tid);
+  return (
+    <span class="name" title={`${tid}${title?.name && ownName(tid) ? " · " + title.name : ""}\n${T.renameHint}`}
+      onClick={() => {
+        const v = prompt(T.renamePrompt(title?.name || tid), ownName(tid) ?? shown);
+        if (v !== null) { setOwnName(tid, v); onChange(); }
+      }}>{shown}</span>
+  );
+}

@@ -4,13 +4,15 @@ import { useMemo, useState } from "preact/hooks";
 import { isSystem, nowMinutes, titleStats } from "../data/dataset.ts";
 import type { Dataset, TitleStats } from "../data/dataset.ts";
 import { fmtDate, T } from "../i18n.ts";
-import { Icon, titleName } from "../ui/Icon.tsx";
+import { Icon, Name, titleName } from "../ui/Icon.tsx";
 
 const h = (min: number) => min / 60;
 
 export function Profile({ ds }: { ds: Dataset }) {
   const [sort, setSort] = useState<"time" | "last" | "name">("time");
   const [system, setSystem] = useState(false);
+  const [, redraw] = useState(0);
+  const refresh = () => redraw((x) => x + 1);
   const now = nowMinutes();
   const since = now - 14 * 24 * 60;
   const stats = useMemo(() => titleStats(ds, since), [ds, since]);
@@ -50,7 +52,7 @@ export function Profile({ ds }: { ds: Dataset }) {
             <div class="recent-game" key={s.tid}>
               <Icon title={ds.titles.get(s.tid)} size={96} />
               <div class="recent-info">
-                <div class="game-name">{name(s)}</div>
+                <div class="game-name"><Name title={ds.titles.get(s.tid)} tid={s.tid} onChange={refresh} /></div>
                 <div>{T.hours(Math.round(h(s.recent) * 10) / 10)} <span class="muted">{T.last2weeks}</span></div>
                 <div>{T.hours(Math.round(h(s.minutes) * 10) / 10)} <span class="muted">{T.total}</span></div>
                 <div class="muted">{T.lastPlayed} {fmtDate(s.last)}</div>
@@ -64,7 +66,7 @@ export function Profile({ ds }: { ds: Dataset }) {
               {recent.slice(3).map((s) => (
                 <tr key={s.tid}>
                   <td><Icon title={ds.titles.get(s.tid)} size={32} /></td>
-                  <td>{name(s)}</td>
+                  <td><Name title={ds.titles.get(s.tid)} tid={s.tid} onChange={refresh} /></td>
                   <td class="num">{T.hoursShort(Math.round(h(s.recent) * 10) / 10)}</td>
                   <td class="num muted">{T.hoursShort(Math.round(h(s.minutes)))}</td>
                 </tr>
@@ -92,7 +94,7 @@ export function Profile({ ds }: { ds: Dataset }) {
             {sorted.map((s) => (
               <tr key={s.tid}>
                 <td><Icon title={ds.titles.get(s.tid)} size={40} /></td>
-                <td>{name(s)}</td>
+                <td><Name title={ds.titles.get(s.tid)} tid={s.tid} onChange={refresh} /></td>
                 <td class="num">{T.hoursShort(Math.round(h(s.minutes) * 10) / 10)}</td>
                 <td class="num">{s.launches || "–"}</td>
                 <td class="num muted">{fmtDate(s.first)}</td>

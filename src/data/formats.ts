@@ -147,8 +147,9 @@ export function readIconCache(idbt: ArrayBuffer, idb: ArrayBuffer, lang: number)
     const rec = new Uint8Array(idb, i * RECORD, RECORD);
     if (tid.startsWith("00048")) {
       // a DS title: its banner - name lines in the long field, a 32x32 icon with 16 colours
+      // (stored like a DSi banner: 8 icon frames from 0x2020, their 8 palettes from 0x3020)
       const { name, publisher } = dsNames(rec, lang);
-      out.set(tid, { tid, name, publisher, icon: decodeDsIcon(rec.subarray(0x2020, 0x2220), rec.subarray(0x2220, 0x2240)), iconSize: 32, seen });
+      out.set(tid, { tid, name, publisher, icon: decodeDsIcon(rec.subarray(0x2020, 0x2220), rec.subarray(0x3020, 0x3040)), iconSize: 32, seen });
     } else {
       const { name, publisher } = titleNames(rec, lang);
       out.set(tid, { tid, name, publisher, icon: decodeIcon(rec.subarray(0x24a0, 0x24a0 + 0x1200)), iconSize: 48, seen });

@@ -35,6 +35,8 @@ const de = {
   nothingRecent: "In den letzten 2 Wochen nicht gespielt.",
   unknownDate: "Datum unbekannt",
   noteLabel: "Hinweis",
+  renameHint: "Klicken: eigenen Namen geben (z. B. „(Free-to-Play)“) – bleibt nur in diesem Browser",
+  renamePrompt: (n: string) => `Eigener Name für „${n}“ (leer = Originalname):`,
 };
 
 const en: typeof de = {
@@ -72,6 +74,8 @@ const en: typeof de = {
   nothingRecent: "Not played in the past 2 weeks.",
   unknownDate: "date unknown",
   noteLabel: "Note",
+  renameHint: "Click: give it your own name (e.g. “(free-to-play)”) – kept in this browser only",
+  renamePrompt: (n: string) => `Your own name for “${n}” (empty = original name):`,
 };
 
 export const lang = (navigator.language || "de").toLowerCase().startsWith("de") ? "de" : "en";
