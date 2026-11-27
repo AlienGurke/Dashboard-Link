@@ -4,7 +4,7 @@ Ein Dashboard für deine Spielzeit – aus den Daten von [3DS Link](https://gith
 (und später auch [Azahar-Link](https://github.com/AlienGurke/Azahar-Link) und
 [melonDS-Link](https://github.com/AlienGurke/melonDS-Link)).
 
-**Öffnen:** <https://aliengurke.github.io/dashboard-link/> – oder `Dashboard-Link.html` aus dem neuesten
+**Öffnen:** <https://aliengurke.github.io/Dashboard-Link/> – oder `Dashboard-Link.html` aus dem neuesten
 [Build](../../actions) herunterladen und per Doppelklick öffnen (geht auch ganz ohne Internet).
 
 Dann den Ordner `activity` von der SD-Karte (`sdmc:/3ds/3DS-Link/activity`) hineinziehen oder auswählen –
