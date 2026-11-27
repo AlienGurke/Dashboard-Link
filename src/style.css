@@ -57,7 +57,7 @@ select { background: var(--card2); color: var(--text); border: 1px solid var(--l
 .recent-info { display: flex; flex-direction: column; gap: 3px; font-size: 14px; min-width: 0; }
 .game-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
 
-.icon { border-radius: 6px; display: block; image-rendering: auto; flex-shrink: 0; }
+.icon { border-radius: 6px; display: block; image-rendering: pixelated; flex-shrink: 0; }
 .icon-empty { background: var(--card2); }
 
 table.games { width: 100%; border-collapse: collapse; font-size: 14px; }

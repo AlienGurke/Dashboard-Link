@@ -8,8 +8,9 @@ export function iconUrl(t: TitleInfo | undefined): string | undefined {
   const hit = cache.get(t.tid);
   if (hit) return hit;
   const c = document.createElement("canvas");
-  c.width = c.height = 48;
-  c.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(t.icon), 48, 48), 0, 0);
+  const n = t.iconSize ?? 48;
+  c.width = c.height = n;
+  c.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(t.icon), n, n), 0, 0);
   const url = c.toDataURL();
   cache.set(t.tid, url);
   return url;

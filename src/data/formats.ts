@@ -46,8 +46,9 @@ export interface TitleInfo {
   tid: Tid;
   name: string;
   publisher: string;
-  /** 48x48 RGBA, ready for ImageData */
+  /** RGBA, ready for ImageData: 48x48 (3DS) or 32x32 (DS) */
   icon?: Uint8ClampedArray;
+  iconSize?: number;
   /** when the HOME Menu last showed it (minutes since 2000), to pick the newest of several slots */
   seen: number;
 }
@@ -144,8 +145,14 @@ export function readIconCache(idbt: ArrayBuffer, idb: ArrayBuffer, lang: number)
     if (prev && prev.seen >= seen) continue;
     if ((i + 1) * RECORD > idb.byteLength) continue;
     const rec = new Uint8Array(idb, i * RECORD, RECORD);
-    const { name, publisher } = titleNames(rec, lang);
-    out.set(tid, { tid, name, publisher, icon: decodeIcon(rec.subarray(0x24a0, 0x24a0 + 0x1200)), seen });
+    if (tid.startsWith("00048")) {
+      // a DS title: its banner - name lines in the long field, a 32x32 icon with 16 colours
+      const { name, publisher } = dsNames(rec, lang);
+      out.set(tid, { tid, name, publisher, icon: decodeDsIcon(rec.subarray(0x2020, 0x2220), rec.subarray(0x2220, 0x2240)), iconSize: 32, seen });
+    } else {
+      const { name, publisher } = titleNames(rec, lang);
+      out.set(tid, { tid, name, publisher, icon: decodeIcon(rec.subarray(0x24a0, 0x24a0 + 0x1200)), iconSize: 48, seen });
+    }
   }
   return out;
 }
@@ -167,6 +174,34 @@ function titleNames(rec: Uint8Array, lang: number) {
     if (name) return { name, publisher: utf16(rec, base + 0x180, 0x80) };
   }
   return { name: "", publisher: "" };
+}
+
+function dsNames(rec: Uint8Array, lang: number) {
+  // DS banners: "Title\nSubtitle\nPublisher" in the long field (languages 0..7)
+  for (const l of [lang, 1, 0, 2, 3, 4, 5, 6, 7]) {
+    const lines = utf16(rec, 0x20 + l * 0x200 + 0x80, 0x100).split("\n").map((x) => x.trim()).filter(Boolean);
+    if (lines.length) return { name: lines.length > 2 ? lines.slice(0, -1).join(" – ") : lines[0], publisher: lines.length > 1 ? lines[lines.length - 1] : "" };
+  }
+  return { name: "", publisher: "" };
+}
+
+/** a DS icon: 32x32, 4 bits per pixel in 8x8 tiles, 16 colours (BGR555, colour 0 transparent) */
+export function decodeDsIcon(bmp: Uint8Array, pal: Uint8Array): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(32 * 32 * 4);
+  for (let tile = 0; tile < 16; tile++) {
+    const tx = (tile % 4) * 8, ty = Math.floor(tile / 4) * 8;
+    for (let p = 0; p < 64; p++) {
+      const b = bmp[tile * 32 + (p >> 1)];
+      const c = p & 1 ? b >> 4 : b & 15;
+      const v = pal[c * 2] | (pal[c * 2 + 1] << 8);
+      const o = ((ty + (p >> 3)) * 32 + tx + (p & 7)) * 4;
+      out[o] = ((v & 31) * 255) / 31;
+      out[o + 1] = (((v >> 5) & 31) * 255) / 31;
+      out[o + 2] = (((v >> 10) & 31) * 255) / 31;
+      out[o + 3] = c ? 255 : 0;
+    }
+  }
+  return out;
 }
 
 /** 48x48 RGB565 in 8x8 tiles, pixels of a tile in Z order -> RGBA */

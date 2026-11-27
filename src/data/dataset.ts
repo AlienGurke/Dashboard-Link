@@ -12,8 +12,10 @@ export type FolderFiles = Map<string, ArrayBuffer>;
 
 export interface Source {
   console: ConsoleInfo;
-  /** first minute the play log covers (before: the Activity Log app's hours) */
+  /** first minute the play log covers */
   logFrom: number;
+  /** the Activity Log app (pld.dat) has everything before this; after it, the play log */
+  pldEnd: number;
   library: LibraryEntry[];
   steps: StepDay[];
 }
@@ -28,35 +30,42 @@ export interface Dataset {
 
 const txt = (b: ArrayBuffer | undefined) => (b ? new TextDecoder().decode(b) : "");
 
-export function readFolder(files: FolderFiles, lang: number): { source: Source; sessions: Session[]; titles: Map<Tid, TitleInfo>; notes: string[] } {
+export function readFolder(files: FolderFiles, lang: number, now = nowMinutes()): { source: Source; sessions: Session[]; titles: Map<Tid, TitleInfo>; notes: string[] } {
   const notes: string[] = [];
   const consoleInfo = readConsole(txt(files.get("console.txt")) || "name=3DS");
   const id = consoleInfo.id || consoleInfo.name;
+  // What the Activity Log app knows (pld.dat) is taken as it is - the same numbers as on the
+  // 3DS. The play log adds what came after the app last took it in, minute by minute.
   const sessions: Session[] = [];
+  let library: LibraryEntry[] = [];
+  let pldEnd = -Infinity; // the app has taken in everything before this
+  const pld = files.get("pld.dat");
+  if (pld) {
+    try {
+      const p = readPld(pld);
+      library = p.library;
+      const hours = sessionsFromHours(p.hours, now, id);
+      for (const h of hours) if (!Number.isNaN(h.start)) pldEnd = Math.max(pldEnd, h.start + 60);
+      sessions.push(...hours);
+    } catch (e) { notes.push(String(e)); }
+  }
   let logFrom = Infinity;
   const ph = files.get("playhistory.bin");
   if (ph) {
     const log = readPlayHistory(ph);
     const t = correctTimes(log, readClock(txt(files.get("clock.txt"))));
     for (let i = 0; i < t.length; i++) if (!Number.isNaN(t[i])) { logFrom = t[i]; break; }
-    sessions.push(...sessionsFromLog(log, t, id));
+    for (const s of sessionsFromLog(log, t, id))
+      // without pld.dat everything; with it only what the app has not taken in yet
+      if (!pld || (!Number.isNaN(s.start) && s.start >= pldEnd)) sessions.push(s);
   } else notes.push("playhistory.bin fehlt");
-  let library: LibraryEntry[] = [];
-  const pld = files.get("pld.dat");
-  if (pld) {
-    try {
-      const p = readPld(pld);
-      library = p.library;
-      sessions.push(...sessionsFromHours(p.hours, logFrom, id));
-    } catch (e) { notes.push(String(e)); }
-  }
   let steps: StepDay[] = [];
   const st = files.get("steps.bin");
   if (st) { try { steps = readSteps(st); } catch (e) { notes.push(String(e)); } }
   let titles = new Map<Tid, TitleInfo>();
   const idbt = files.get("idbt.dat"), idb = files.get("idb.dat");
   if (idbt && idb) titles = readIconCache(idbt, idb, lang);
-  return { source: { console: consoleInfo, logFrom, library, steps }, sessions, titles, notes };
+  return { source: { console: consoleInfo, logFrom, pldEnd, library, steps }, sessions, titles, notes };
 }
 
 export function combine(folders: FolderFiles[], lang: number): Dataset {
@@ -104,14 +113,21 @@ export function titleStats(ds: Dataset, since: number): Map<Tid, TitleStats> {
       if (s.start >= since) g.recent += s.minutes;
     }
   }
-  // the hour table does not count starts: the Activity Log app's own count covers that time
-  for (const src of ds.sources)
+  // the Activity Log app's own totals (its software library) are what the 3DS shows: they
+  // replace the sum of its hours (a few minutes apart at times); starts only it counts
+  for (const src of ds.sources) {
+    const hourSum = new Map<Tid, number>();
+    for (const s of ds.sessions) if (s.kind === "3ds-hours" && s.source === (src.console.id || src.console.name))
+      hourSum.set(s.tid, (hourSum.get(s.tid) ?? 0) + s.minutes);
     for (const l of src.library) {
       const g = out.get(l.tid);
       if (!g) continue;
-      g.launches = Math.max(g.launches, l.launches);
+      g.minutes += l.seconds / 60 - (hourSum.get(l.tid) ?? 0);
+      g.launches += l.launches;
       g.first = Math.min(g.first, l.firstDay * 1440);
+      if (l.lastDay * 1440 > g.last && l.lastDay * 1440 <= nowMinutes()) g.last = l.lastDay * 1440;
     }
+  }
   return out;
 }
 

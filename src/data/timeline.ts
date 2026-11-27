@@ -169,14 +169,16 @@ export function sessionsFromLog(entries: LogEntry[], t: Float64Array, source: st
   return out;
 }
 
-/** the Activity Log app's hours, for the time before the log begins (start of the hour, minutes) */
-export function sessionsFromHours(hours: HourEntry[], before: number, source: string): Session[] {
-  // the table is in the order the hours were noted: take it up to where the log begins
-  // (later on, a reset clock can put hours at 2011 again - those the log has, with dates)
+/** the Activity Log app's hours (what it shows, exactly). The table is in the order the hours
+ *  were noted; an hour more than a month before the ones noted before it, or after `now`, is
+ *  on a wrong clock (lost clock: 2011, or set ahead) - it counts, without a date. */
+export function sessionsFromHours(hours: HourEntry[], now: number, source: string): Session[] {
   const out: Session[] = [];
+  let latest = -Infinity;
   for (const h of hours) {
-    if (h.min + 60 > before) break;
-    out.push({ tid: h.tid, start: h.min, minutes: h.seconds / 60, launch: false, kind: "3ds-hours", source });
+    const wrong = h.min > now || h.min < latest - 30 * 24 * 60;
+    if (!wrong) latest = Math.max(latest, h.min);
+    out.push({ tid: h.tid, start: wrong ? NaN : h.min, minutes: h.seconds / 60, launch: false, kind: "3ds-hours", source });
   }
   return out;
 }
