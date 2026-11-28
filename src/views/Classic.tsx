@@ -18,7 +18,7 @@ const h1 = (min: number) => Math.round(min / 6) / 10;
 /** under an hour in minutes, else hours */
 const dur = (min: number) => (min < 60 ? T.minutes(Math.max(1, Math.round(min))) : T.hoursShort(h1(min)));
 
-export function Classic({ ds }: { ds: Dataset }) {
+export function Classic({ ds, system }: { ds: Dataset; system: boolean }) {
   const [tab, setTab] = useState<Tab>("album");
   return (
     <div class="classic">
@@ -27,8 +27,8 @@ export function Classic({ ds }: { ds: Dataset }) {
         <button class={tab === "stats" ? "active" : ""} onClick={() => setTab("stats")}>{T.statistics}</button>
         <button class={tab === "steps" ? "active" : ""} onClick={() => setTab("steps")}>{T.steps}</button>
       </nav>
-      {tab === "album" && <Album ds={ds} />}
-      {tab === "stats" && <Stats ds={ds} />}
+      {tab === "album" && <Album ds={ds} system={system} />}
+      {tab === "stats" && <Stats ds={ds} system={system} />}
       {tab === "steps" && <Steps ds={ds} />}
     </div>
   );
@@ -36,13 +36,13 @@ export function Classic({ ds }: { ds: Dataset }) {
 
 // ------------------------------------------------------------------ software album
 
-function Album({ ds }: { ds: Dataset }) {
+function Album({ ds, system }: { ds: Dataset; system: boolean }) {
   const [sort, setSort] = useState<"time" | "last" | "name">("time");
   const [open, setOpen] = useState<string | null>(null);
   const [, redraw] = useState(0);
   const stats = useMemo(() => titleStats(ds, nowMinutes()), [ds]);
   const name = (s: TitleStats) => titleName(ds.titles.get(s.tid), s.tid);
-  const list = [...stats.values()].filter((s) => !isSystem(s.tid)).sort((a, b) =>
+  const list = [...stats.values()].filter((s) => (system || !isSystem(s.tid))).sort((a, b) =>
     sort === "time" ? b.minutes - a.minutes : sort === "last" ? b.last - a.last : name(a).localeCompare(name(b)));
   const sel = open ? stats.get(open) : undefined;
   return (
@@ -125,11 +125,11 @@ function Detail({ ds, s, onClose, onRename }: { ds: Dataset; s: TitleStats; onCl
 
 const RANGE: Record<Unit, number> = { day: 60, week: 52, month: 0, year: 0 }; // 0: everything
 
-function Stats({ ds }: { ds: Dataset }) {
+function Stats({ ds, system }: { ds: Dataset; system: boolean }) {
   const [unit, setUnit] = useState<Unit>("month");
   const [sel, setSel] = useState<string | undefined>();
   const now = nowMinutes();
-  const playable = useMemo(() => ds.sessions.filter((s) => !isSystem(s.tid) && !Number.isNaN(s.start)), [ds]);
+  const playable = useMemo(() => ds.sessions.filter((s) => (system || !isSystem(s.tid)) && !Number.isNaN(s.start)), [ds, system]);
   const per = useMemo(() => playPerPeriod(playable, unit), [playable, unit]);
   const bars = useMemo(() => {
     if (!per.size) return [] as Bar[];

@@ -16,6 +16,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState<View>("profile");
+  const [system, setSystem] = useState(false);
   const [over, setOver] = useState(false);
   const dirInput = useRef<HTMLInputElement>(null);
   const zipInput = useRef<HTMLInputElement>(null);
@@ -70,12 +71,13 @@ function App() {
           <button class={view === "classic" ? "active" : ""} onClick={() => setView("classic")}>{T.viewClassic}</button>
           <button class={view === "overview" ? "active" : ""} onClick={() => setView("overview")}>{T.viewOverview}</button>
         </nav>
+        <label class="small"><input type="checkbox" checked={system} onChange={(e) => setSystem((e.target as HTMLInputElement).checked)} /> {T.showSystem}</label>
         <button class="link" onClick={() => setDs(null)}>{T.other}</button>
       </header>
       {ds.notes.map((n) => <p class="note" key={n}>{T.noteLabel}: {n}</p>)}
-      {view === "profile" && <Profile ds={ds} />}
-      {view === "classic" && <Classic ds={ds} />}
-      {view === "overview" && <Overview ds={ds} />}
+      {view === "profile" && <Profile ds={ds} system={system} />}
+      {view === "classic" && <Classic ds={ds} system={system} />}
+      {view === "overview" && <Overview ds={ds} system={system} />}
     </main>
   );
 }

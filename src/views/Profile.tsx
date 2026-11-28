@@ -8,9 +8,8 @@ import { Icon, Name, titleName } from "../ui/Icon.tsx";
 
 const h = (min: number) => min / 60;
 
-export function Profile({ ds }: { ds: Dataset }) {
+export function Profile({ ds, system }: { ds: Dataset; system: boolean }) {
   const [sort, setSort] = useState<"time" | "last" | "name">("time");
-  const [system, setSystem] = useState(false);
   const [, redraw] = useState(0);
   const refresh = () => redraw((x) => x + 1);
   const now = nowMinutes();
@@ -85,7 +84,6 @@ export function Profile({ ds }: { ds: Dataset }) {
               <option value="last">{T.sortLast}</option>
               <option value="name">{T.sortName}</option>
             </select>
-            <label><input type="checkbox" checked={system} onChange={(e) => setSystem((e.target as HTMLInputElement).checked)} /> {T.showSystem}</label>
           </div>
         </div>
         <table class="games">

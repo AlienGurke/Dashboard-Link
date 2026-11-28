@@ -15,8 +15,8 @@ const h1 = (min: number) => Math.round(min / 6) / 10;
 const dur = (min: number) => (min < 60 ? T.minutes(Math.max(1, Math.round(min))) : T.hoursShort(h1(min)));
 const yearStart = (y: number) => (Date.UTC(y, 0, 1) - Date.UTC(2000, 0, 1)) / 60000;
 
-export function Overview({ ds }: { ds: Dataset }) {
-  const play = useMemo(() => ds.sessions.filter((s) => !isSystem(s.tid) && !Number.isNaN(s.start)), [ds]);
+export function Overview({ ds, system }: { ds: Dataset; system: boolean }) {
+  const play = useMemo(() => ds.sessions.filter((s) => (system || !isSystem(s.tid)) && !Number.isNaN(s.start)), [ds, system]);
   const years = useMemo(() => {
     const set = new Set<number>();
     for (const s of play) set.add(asDate(s.start).getUTCFullYear());
@@ -30,9 +30,9 @@ export function Overview({ ds }: { ds: Dataset }) {
       <nav class="subtabs years">
         {years.map((x) => <button key={x} class={x === y ? "active" : ""} onClick={() => setYear(x)}>{x}</button>)}
       </nav>
-      <Recap ds={ds} play={play} year={y} />
+      <Recap ds={ds} play={play} year={y} system={system} />
       <Calendar play={play} year={y} />
-      <Latest ds={ds} />
+      <Latest ds={ds} system={system} />
       {ds.sources.length > 1 && <Consoles ds={ds} />}
     </div>
   );
@@ -40,7 +40,7 @@ export function Overview({ ds }: { ds: Dataset }) {
 
 // ------------------------------------------------------------------ year recap
 
-function Recap({ ds, play, year }: { ds: Dataset; play: Session[]; year: number }) {
+function Recap({ ds, play, year, system }: { ds: Dataset; play: Session[]; year: number; system: boolean }) {
   const from = yearStart(year), to = yearStart(year + 1);
   const r = useMemo(() => {
     const inYear = play.filter((s) => s.start >= from && s.start < to);
@@ -59,7 +59,7 @@ function Recap({ ds, play, year }: { ds: Dataset; play: Session[]; year: number 
     }
     // records need sessions known to the minute: the play log
     for (const s of ds.logSessions)
-      if (!Number.isNaN(s.start) && s.start >= from && s.start < to && !isSystem(s.tid) && (!longest || s.minutes > longest.minutes)) longest = s;
+      if (!Number.isNaN(s.start) && s.start >= from && s.start < to && (system || !isSystem(s.tid)) && (!longest || s.minutes > longest.minutes)) longest = s;
     // first time ever played falls into this year
     const firstEver = new Map<string, number>();
     for (const s of play) firstEver.set(s.tid, Math.min(firstEver.get(s.tid) ?? Infinity, s.start));
@@ -73,7 +73,7 @@ function Recap({ ds, play, year }: { ds: Dataset; play: Session[]; year: number 
       month: months.indexOf(Math.max(...months)), monthMin: Math.max(...months),
       weekday: weekdays.indexOf(Math.max(...weekdays)), newGames,
     };
-  }, [ds, play, from, to]);
+  }, [ds, play, from, to, system]);
   if (!r.top.length) return <section class="card"><p class="muted">{T.nothingInPeriod}</p></section>;
   const fav = r.top[0];
   const monthName = new Date(Date.UTC(year, r.month, 1)).toLocaleDateString(loc, { timeZone: "UTC", month: "long" });
@@ -164,11 +164,11 @@ function Calendar({ play, year }: { play: Session[]; year: number }) {
 
 // ------------------------------------------------------------------ latest sessions
 
-function Latest({ ds }: { ds: Dataset }) {
+function Latest({ ds, system }: { ds: Dataset; system: boolean }) {
   const [n, setN] = useState(20);
   const list = useMemo(() => [...ds.logSessions, ...ds.sessions.filter((s) => s.kind === "pc")]
-    .filter((s) => !Number.isNaN(s.start) && !isSystem(s.tid) && s.minutes >= 1)
-    .sort((a, b) => b.start - a.start), [ds]);
+    .filter((s) => !Number.isNaN(s.start) && (system || !isSystem(s.tid)) && s.minutes >= 1)
+    .sort((a, b) => b.start - a.start), [ds, system]);
   const now = nowMinutes();
   return (
     <section class="card">
