@@ -1,6 +1,6 @@
 import { render } from "preact";
-import { useRef, useState } from "preact/hooks";
-import { combine } from "./data/dataset.ts";
+import { useMemo, useRef, useState } from "preact/hooks";
+import { combine, onlySource } from "./data/dataset.ts";
 import type { Dataset } from "./data/dataset.ts";
 import { smdhLang, T } from "./i18n.ts";
 import { fromDrop, fromFileList } from "./load.ts";
@@ -17,6 +17,7 @@ function App() {
   const [error, setError] = useState("");
   const [view, setView] = useState<View>("profile");
   const [system, setSystem] = useState(false);
+  const [source, setSource] = useState("");
   const [over, setOver] = useState(false);
   const dirInput = useRef<HTMLInputElement>(null);
   const zipInput = useRef<HTMLInputElement>(null);
@@ -28,6 +29,7 @@ function App() {
       const folders = await get();
       if (!folders.length) { setError(T.nothing); return; }
       setDs(combine(folders, smdhLang));
+      setSource("");
     } catch (e) {
       setError(String(e));
     } finally {
@@ -35,7 +37,9 @@ function App() {
     }
   };
 
-  if (!ds)
+  const shown = useMemo(() => (ds ? onlySource(ds, source) : null), [ds, source]);
+
+  if (!ds || !shown)
     return (
       <main class="start">
         <h1>{T.title}</h1>
@@ -71,13 +75,19 @@ function App() {
           <button class={view === "classic" ? "active" : ""} onClick={() => setView("classic")}>{T.viewClassic}</button>
           <button class={view === "overview" ? "active" : ""} onClick={() => setView("overview")}>{T.viewOverview}</button>
         </nav>
+        {ds.sources.length > 1 && (
+          <select class="small" value={source} onChange={(e) => setSource((e.target as HTMLSelectElement).value)}>
+            <option value="">{T.allSources}</option>
+            {ds.sources.map((s) => <option key={s.console.id || s.console.name} value={s.console.id || s.console.name}>{s.console.name}</option>)}
+          </select>
+        )}
         <label class="small"><input type="checkbox" checked={system} onChange={(e) => setSystem((e.target as HTMLInputElement).checked)} /> {T.showSystem}</label>
         <button class="link" onClick={() => setDs(null)}>{T.other}</button>
       </header>
       {ds.notes.map((n) => <p class="note" key={n}>{T.noteLabel}: {n}</p>)}
-      {view === "profile" && <Profile ds={ds} system={system} />}
-      {view === "classic" && <Classic ds={ds} system={system} />}
-      {view === "overview" && <Overview ds={ds} system={system} />}
+      {view === "profile" && <Profile ds={shown} system={system} />}
+      {view === "classic" && <Classic ds={shown} system={system} />}
+      {view === "overview" && <Overview ds={shown} system={system} />}
     </main>
   );
 }

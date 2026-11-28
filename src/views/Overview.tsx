@@ -166,7 +166,7 @@ function Calendar({ play, year }: { play: Session[]; year: number }) {
 
 function Latest({ ds, system }: { ds: Dataset; system: boolean }) {
   const [n, setN] = useState(20);
-  const list = useMemo(() => [...ds.logSessions, ...ds.sessions.filter((s) => s.kind === "pc")]
+  const list = useMemo(() => ds.logSessions
     .filter((s) => !Number.isNaN(s.start) && (system || !isSystem(s.tid)) && s.minutes >= 1)
     .sort((a, b) => b.start - a.start), [ds, system]);
   const now = nowMinutes();

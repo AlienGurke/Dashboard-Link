@@ -1,7 +1,7 @@
 // Everything read from one or more activity folders, put together.
 
 import {
-  readClock, readConsole, readIconCache, readSmdh, readPlayHistory, readPld, readSteps,
+  readClock, readConsole, readIconCache, readPcActivity, readSmdh, readPlayHistory, readPld, readSteps, readTitlesTxt,
 } from "./formats.ts";
 import type { ConsoleInfo, LibraryEntry, StepDay, Tid, TitleInfo } from "./formats.ts";
 import { correctTimes, sessionsFromHours, sessionsFromLog } from "./timeline.ts";
@@ -32,6 +32,33 @@ export interface Dataset {
 }
 
 const txt = (b: ArrayBuffer | undefined) => (b ? new TextDecoder().decode(b) : "");
+
+type FolderResult = { sources: Source[]; sessions: Session[]; logSessions: Session[]; titles: Map<Tid, TitleInfo>; notes: string[] };
+
+/** %APPDATA%\3DS-Link\activity on a PC: one source per emulator */
+export function readPcFolder(files: FolderFiles): FolderResult {
+  const r: FolderResult = { sources: [], sessions: [], logSessions: [], titles: new Map(), notes: [] };
+  const pc = readConsole(txt(files.get("pc.txt")) || "name=PC");
+  for (const [file, model] of [["azahar.bin", "Azahar"], ["melonds.bin", "melonDS"]] as const) {
+    const buf = files.get(file);
+    if (!buf) continue;
+    const id = `${pc.id || pc.name}-${model.toLowerCase()}`;
+    let logFrom = Infinity;
+    try {
+      for (const e of readPcActivity(buf, file)) {
+        const s: Session & { with3ds?: boolean } = { tid: e.tid, start: e.start, minutes: e.seconds / 60, launch: true, kind: "pc", source: id, with3ds: e.with3ds };
+        logFrom = Math.min(logFrom, e.start);
+        r.sessions.push(s);
+        r.logSessions.push(s);
+      }
+    } catch (e) { r.notes.push(String(e)); continue; }
+    r.sources.push({ console: { model: `PC · ${model}`, id, name: `${pc.name} · ${model}` }, logFrom, pldEnd: -Infinity, library: [], steps: [] });
+  }
+  // names of the games played there (no icons): only used when nothing better is known
+  for (const [tid, name] of readTitlesTxt(txt(files.get("titles.txt"))))
+    r.titles.set(tid, { tid, name, publisher: "", seen: -Infinity });
+  return r;
+}
 
 export function readFolder(files: FolderFiles, lang: number, now = nowMinutes()): { source: Source; sessions: Session[]; logSessions: Session[]; titles: Map<Tid, TitleInfo>; notes: string[] } {
   const notes: string[] = [];
@@ -83,7 +110,22 @@ export function readFolder(files: FolderFiles, lang: number, now = nowMinutes())
 
 export function combine(folders: FolderFiles[], lang: number): Dataset {
   const ds: Dataset = { sources: [], sessions: [], logSessions: [], titles: new Map(), notes: [] };
+  const pcSeen = new Map<string, Session>();
   for (const f of folders) {
+    if (!f.has("playhistory.bin") && !f.has("pld.dat")) {
+      const r = readPcFolder(f);
+      ds.notes.push(...r.notes);
+      for (const src of r.sources) if (!ds.sources.some((x) => x.console.id === src.console.id)) ds.sources.push(src);
+      // the same PC folder twice (e.g. a copy): every session once (PC + emulator + start)
+      for (const s of r.sessions) {
+        const key = `${s.source}|${s.tid}|${s.start}`;
+        const prev = pcSeen.get(key);
+        if (!prev) pcSeen.set(key, s);
+        else if (s.minutes > prev.minutes) prev.minutes = s.minutes;
+      }
+      for (const [k, v] of r.titles) if (!ds.titles.has(k)) ds.titles.set(k, v);
+      continue;
+    }
     const r = readFolder(f, lang);
     ds.sources.push(r.source);
     ds.sessions.push(...r.sessions);
@@ -94,7 +136,22 @@ export function combine(folders: FolderFiles[], lang: number): Dataset {
       if (!prev || prev.seen < v.seen) ds.titles.set(k, v);
     }
   }
+  // Played on the PC with the 3DS connected: when the 3DS logged the same game itself
+  // (Azahar-Link's "count on the 3DS"), that entry counts and the PC's is left out.
+  for (const s of pcSeen.values()) {
+    const with3ds = (s as Session & { with3ds?: boolean }).with3ds;
+    if (with3ds && ds.logSessions.some((l) => l.kind === "3ds" && l.tid === s.tid && Math.abs(l.start - s.start) <= 3)) continue;
+    ds.sessions.push(s);
+    ds.logSessions.push(s);
+  }
   return ds;
+}
+
+/** only what one console or PC (source id) has; "" = everything */
+export function onlySource(ds: Dataset, id: string): Dataset {
+  if (!id) return ds;
+  const mine = (s: Session) => s.source === id;
+  return { ...ds, sources: ds.sources.filter((s) => (s.console.id || s.console.name) === id), sessions: ds.sessions.filter(mine), logSessions: ds.logSessions.filter(mine) };
 }
 
 // ------------------------------------------------------------------ statistics

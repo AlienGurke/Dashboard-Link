@@ -256,3 +256,39 @@ export function readClock(txt: string): ClockNote[] {
   }
   return out;
 }
+
+// ------------------------------------------------------------------ the PC (Azahar-Link, melonDS-Link)
+
+export interface PcEntry {
+  tid: Tid;
+  /** minutes since 2000, the PC's local time */
+  start: number;
+  seconds: number;
+  /** a 3DS was connected (then the 3DS may have it in its own log too) */
+  with3ds: boolean;
+}
+
+/** azahar.bin / melonds.bin: "3DSLPCPL", version, entry size; 24-byte entries */
+export function readPcActivity(buf: ArrayBuffer, file: string): PcEntry[] {
+  const v = new DataView(buf);
+  if (buf.byteLength < 16 || text(buf, 0, 8) !== "3DSLPCPL") throw new Error(`${file}: kein Spielzeit-Protokoll von Azahar-Link / melonDS-Link`);
+  const size = v.getUint32(12, true);
+  if (size < 24) throw new Error(`${file}: unbekannte Eintragsgröße ${size}`);
+  const out: PcEntry[] = [];
+  for (let o = 16; o + size <= buf.byteLength; o += size) {
+    const tid = tidAt(v, o, false);
+    if (/^0+$/.test(tid)) continue;
+    out.push({ tid, start: Math.floor(v.getUint32(o + 8, true) / 60), seconds: v.getUint32(o + 12, true), with3ds: (v.getUint16(o + 20, true) & 1) !== 0 });
+  }
+  return out;
+}
+
+/** titles.txt: "title id<TAB>name" */
+export function readTitlesTxt(txt: string): Map<Tid, string> {
+  const out = new Map<Tid, string>();
+  for (const line of txt.split(/\r?\n/)) {
+    const m = /^([0-9a-fA-F]{16})\t(.+)$/.exec(line);
+    if (m) out.set(m[1].toUpperCase(), m[2].trim());
+  }
+  return out;
+}

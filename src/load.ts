@@ -4,7 +4,7 @@
 import { unzipSync } from "fflate";
 import type { FolderFiles } from "./data/dataset.ts";
 
-const WANTED = /^(playhistory\.bin|pld\.dat|steps\.bin|idb\.dat|idbt\.dat|clock\.txt|console\.txt|[0-9a-f]{16}\.smdh)$/i;
+const WANTED = /^(playhistory\.bin|pld\.dat|steps\.bin|idb\.dat|idbt\.dat|clock\.txt|console\.txt|pc\.txt|titles\.txt|azahar\.bin|melonds\.bin|[0-9a-f]{16}\.smdh)$/i;
 
 /** path -> data, for the files we read; grouped by the folder they are in */
 function group(files: { path: string; data: ArrayBuffer }[]): FolderFiles[] {
@@ -19,7 +19,7 @@ function group(files: { path: string; data: ArrayBuffer }[]): FolderFiles[] {
     if (!dirs.has(dir)) dirs.set(dir, new Map());
     dirs.get(dir)!.set(name, f.data);
   }
-  return [...dirs.values()].filter((d) => d.has("playhistory.bin") || d.has("pld.dat"));
+  return [...dirs.values()].filter((d) => d.has("playhistory.bin") || d.has("pld.dat") || d.has("azahar.bin") || d.has("melonds.bin"));
 }
 
 async function fromZip(buf: ArrayBuffer): Promise<{ path: string; data: ArrayBuffer }[]> {
