@@ -22,7 +22,10 @@ export interface Source {
 
 export interface Dataset {
   sources: Source[];
+  /** what the totals are made of: the Activity Log app's hours, then the play log after them */
   sessions: Session[];
+  /** every session of the play log, to the minute (for lists of sessions, records, time of day) */
+  logSessions: Session[];
   titles: Map<Tid, TitleInfo>;
   /** problems that did not stop reading (shown, not hidden) */
   notes: string[];
@@ -30,7 +33,7 @@ export interface Dataset {
 
 const txt = (b: ArrayBuffer | undefined) => (b ? new TextDecoder().decode(b) : "");
 
-export function readFolder(files: FolderFiles, lang: number, now = nowMinutes()): { source: Source; sessions: Session[]; titles: Map<Tid, TitleInfo>; notes: string[] } {
+export function readFolder(files: FolderFiles, lang: number, now = nowMinutes()): { source: Source; sessions: Session[]; logSessions: Session[]; titles: Map<Tid, TitleInfo>; notes: string[] } {
   const notes: string[] = [];
   const consoleInfo = readConsole(txt(files.get("console.txt")) || "name=3DS");
   const id = consoleInfo.id || consoleInfo.name;
@@ -50,14 +53,17 @@ export function readFolder(files: FolderFiles, lang: number, now = nowMinutes())
     } catch (e) { notes.push(String(e)); }
   }
   let logFrom = Infinity;
+  const logSessions: Session[] = [];
   const ph = files.get("playhistory.bin");
   if (ph) {
     const log = readPlayHistory(ph);
     const t = correctTimes(log, readClock(txt(files.get("clock.txt"))));
     for (let i = 0; i < t.length; i++) if (!Number.isNaN(t[i])) { logFrom = t[i]; break; }
-    for (const s of sessionsFromLog(log, t, id))
+    for (const s of sessionsFromLog(log, t, id)) {
+      logSessions.push(s);
       // without pld.dat everything; with it only what the app has not taken in yet
       if (!pld || (!Number.isNaN(s.start) && s.start >= pldEnd)) sessions.push(s);
+    }
   } else notes.push("playhistory.bin fehlt");
   let steps: StepDay[] = [];
   const st = files.get("steps.bin");
@@ -72,15 +78,16 @@ export function readFolder(files: FolderFiles, lang: number, now = nowMinutes())
     const info = readSmdh(m[1].toUpperCase(), buf, lang);
     if (info) titles.set(info.tid, info);
   }
-  return { source: { console: consoleInfo, logFrom, pldEnd, library, steps }, sessions, titles, notes };
+  return { source: { console: consoleInfo, logFrom, pldEnd, library, steps }, sessions, logSessions, titles, notes };
 }
 
 export function combine(folders: FolderFiles[], lang: number): Dataset {
-  const ds: Dataset = { sources: [], sessions: [], titles: new Map(), notes: [] };
+  const ds: Dataset = { sources: [], sessions: [], logSessions: [], titles: new Map(), notes: [] };
   for (const f of folders) {
     const r = readFolder(f, lang);
     ds.sources.push(r.source);
     ds.sessions.push(...r.sessions);
+    ds.logSessions.push(...r.logSessions);
     ds.notes.push(...r.notes);
     for (const [k, v] of r.titles) {
       const prev = ds.titles.get(k);

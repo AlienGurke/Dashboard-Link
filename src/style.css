@@ -108,3 +108,19 @@ h4 { margin: 18px 0 8px; font-size: 14px; color: var(--muted); font-weight: 500;
 .chart-empty { padding: 20px 0; }
 td.share { width: 40%; }
 td.share div { height: 8px; background: var(--accent); border-radius: 4px; opacity: 0.7; }
+
+.years { flex-wrap: wrap; }
+.recap-hero { display: flex; gap: 18px; align-items: center; margin-bottom: 16px; }
+.recap-hero h2 { margin: 2px 0 4px; }
+td.rank { width: 28px; color: var(--muted); text-align: right; }
+.badge { margin-left: 8px; font-size: 11px; background: #2e7d32; color: #fff; border-radius: 4px; padding: 1px 6px; }
+.calendar { overflow-x: auto; }
+.cal-months { display: grid; grid-template-columns: repeat(12, 1fr); font-size: 11px; color: var(--muted); margin-bottom: 4px; min-width: 640px; }
+.cal-grid { display: flex; gap: 3px; min-width: 640px; }
+.cal-week { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.cell { display: block; aspect-ratio: 1; border-radius: 2px; background: var(--card2); }
+.legend { display: flex; align-items: center; gap: 4px; }
+.legend .cell { width: 11px; height: 11px; }
+.cell.l1 { background: #1e4a6b; } .cell.l2 { background: #2b6c9b; } .cell.l3 { background: #3b8ccb; } .cell.l4 { background: #6cbcf5; }
+.cell.out { background: transparent; }
+button.more { margin-top: 10px; }

@@ -5,6 +5,7 @@ import type { Dataset } from "./data/dataset.ts";
 import { smdhLang, T } from "./i18n.ts";
 import { fromDrop, fromFileList } from "./load.ts";
 import { Classic } from "./views/Classic.tsx";
+import { Overview } from "./views/Overview.tsx";
 import { Profile } from "./views/Profile.tsx";
 import "./style.css";
 
@@ -67,13 +68,14 @@ function App() {
         <nav>
           <button class={view === "profile" ? "active" : ""} onClick={() => setView("profile")}>{T.viewProfile}</button>
           <button class={view === "classic" ? "active" : ""} onClick={() => setView("classic")}>{T.viewClassic}</button>
-          <button disabled title={T.soon}>{T.viewOverview}</button>
+          <button class={view === "overview" ? "active" : ""} onClick={() => setView("overview")}>{T.viewOverview}</button>
         </nav>
         <button class="link" onClick={() => setDs(null)}>{T.other}</button>
       </header>
       {ds.notes.map((n) => <p class="note" key={n}>{T.noteLabel}: {n}</p>)}
       {view === "profile" && <Profile ds={ds} />}
       {view === "classic" && <Classic ds={ds} />}
+      {view === "overview" && <Overview ds={ds} />}
     </main>
   );
 }
